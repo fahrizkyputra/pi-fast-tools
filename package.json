@@ -1,6 +1,6 @@
 {
   "name": "@fahrizkyputra/pi-fast-tools",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Fewer and faster tool calls for Pi: recursive grep skips node_modules/build output, tests and builds get a timeout, tsc gets a bigger heap, and the model is told to batch calls and use rg/fd. Optional codemode auto-enable.",
   "keywords": [
     "pi-package",
@@ -37,7 +37,7 @@
   "scripts": {
     "test": "node --test test/*.test.ts",
     "typecheck": "tsc --noEmit",
-    "test:e2e": "node scripts/e2e-rpc.mjs"
+    "test:e2e": "node scripts/e2e-rpc.mjs && node scripts/e2e-toggle.mjs"
   },
   "peerDependencies": {
     "@earendil-works/pi-coding-agent": "*"

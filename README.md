@@ -43,7 +43,25 @@ Pi's built-in [`codemode`](https://pi.dev) tool lets the model run many tool cal
 pi install npm:@fahrizkyputra/pi-fast-tools
 ```
 
-Then `/reload` in a running session, or start a new one. `/fast-tools` shows the effective configuration.
+Then `/reload` in a running session, or start a new one. Guard and rules are on right away; codemode is off until you turn it on.
+
+## Commands
+
+```
+/fast-tools                 show the effective configuration
+/fast-tools status          same
+/fast-tools codemode-on     activate codemode now and save fastTools.codemode: true
+/fast-tools codemode-off    deactivate codemode now and save fastTools.codemode: false
+/fast-tools guard-on|off    bash rewrites (grep excludes, timeout, tsc heap)
+/fast-tools rules-on|off    the <tool_speed> prompt section
+```
+
+Toggles apply to the next tool call or model request without a reload, and are saved to the user settings file (`~/.pi/agent/settings.json`) so new sessions start the same way. Only `fastTools.<key>` is written; every other setting is kept. Tab completes the arguments.
+
+Two things can still override a saved toggle in new sessions, and the command tells you when it sees them:
+
+- a project `.pi/settings.json` with its own `fastTools` value;
+- `"defaultTools": ["+codemode"]`, which turns codemode on regardless of `fastTools.codemode`. Remove it if you want `codemode-off` to stick.
 
 ## Configure
 
@@ -86,7 +104,8 @@ npm install
 npm test             # unit + wiring tests
 npm run typecheck
 npm run test:e2e     # real pi process with a scripted faux model, no API key
-node scripts/e2e-rpc.mjs --without-extension   # must fail: proves the e2e bites
+node scripts/e2e-rpc.mjs --without-extension      # must fail: proves the e2e bites
+node scripts/e2e-toggle.mjs --without-extension   # must fail too
 ```
 
 ## License

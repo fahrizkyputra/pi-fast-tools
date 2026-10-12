@@ -4,12 +4,27 @@
  */
 
 import assert from "node:assert/strict";
-import { test } from "node:test";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { after, test } from "node:test";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import fastTools from "../extensions/fast-tools.ts";
 import { RULES_SECTION } from "../src/rules.ts";
 
 type Handler = (event: any, ctx?: any) => unknown;
+
+// /fast-tools writes the user settings file: point pi's agent dir at a scratch
+// directory so tests can never touch the real ~/.pi/agent/settings.json.
+const scratch = mkdtempSync(join(tmpdir(), "pi-fast-tools-wiring-"));
+const agentDir = join(scratch, "agent");
+const workDir = join(scratch, "work");
+mkdirSync(agentDir, { recursive: true });
+mkdirSync(workDir, { recursive: true });
+process.env.PI_CODING_AGENT_DIR = agentDir;
+const userSettings = join(agentDir, "settings.json");
+after(() => rmSync(scratch, { recursive: true, force: true }));
+const readUser = () => JSON.parse(readFileSync(userSettings, "utf8"));
 
 function harness(settings: unknown, opts: { activeTools?: string[]; allTools?: string[] } = {}) {
 	const handlers = new Map<string, Handler>();
@@ -31,7 +46,7 @@ function harness(settings: unknown, opts: { activeTools?: string[]; allTools?: s
 		},
 	} as unknown as ExtensionAPI;
 	fastTools(pi);
-	const ctx = { hasUI: true, ui: { notify: (m: string) => notes.push(m) } };
+	const ctx = { hasUI: true, cwd: workDir, ui: { notify: (m: string) => notes.push(m) } };
 	return {
 		handlers,
 		commands,
@@ -121,11 +136,107 @@ test("codemode: true warns instead of failing when codemode is unavailable", asy
 	assert.match(h.notes.join("\n"), /codemode is not available/);
 });
 
-test("/fast-tools prints the effective config", async () => {
+test("/fast-tools and /fast-tools status print the effective config", async () => {
 	const h = harness({ fastTools: { timeoutSeconds: 0 } });
 	await h.commands.get("fast-tools")!.handler("", h.ctx);
-	const text = h.notes.join("\n");
-	assert.match(text, /guard: on/);
-	assert.match(text, /timeoutSeconds: off/);
-	assert.match(text, /excludeDirs: node_modules/);
+	await h.commands.get("fast-tools")!.handler("status", h.ctx);
+	assert.equal(h.notes.length, 2);
+	assert.match(h.notes[0]!, /guard: on/);
+	assert.match(h.notes[0]!, /timeoutSeconds: off/);
+	assert.match(h.notes[0]!, /excludeDirs: node_modules/);
+	assert.match(h.notes[0]!, /Toggle: \/fast-tools/);
+});
+
+test("codemode-on activates codemode now and saves it", async () => {
+	rmSync(userSettings, { force: true });
+	const h = harness({});
+	await h.commands.get("fast-tools")!.handler("codemode-on", h.ctx);
+	assert.ok(h.active().includes("codemode"));
+	assert.equal(readUser().fastTools.codemode, true);
+	assert.match(h.notes.at(-1)!, /codemode on \(now, saved to settings\)/);
+});
+
+test("codemode-off deactivates codemode now, saves it, and keeps other settings", async () => {
+	writeFileSync(userSettings, JSON.stringify({ theme: "dark", fastTools: { codemode: true, timeoutSeconds: 900 } }));
+	const h = harness({ fastTools: { codemode: true } }, { activeTools: ["read", "bash", "codemode"] });
+	await h.commands.get("fast-tools")!.handler("codemode-off", h.ctx);
+	assert.deepEqual(h.active(), ["read", "bash"]);
+	assert.deepEqual(readUser(), { theme: "dark", fastTools: { codemode: false, timeoutSeconds: 900 } });
+});
+
+test("codemode-off warns when defaultTools re-enables codemode in new sessions", async () => {
+	writeFileSync(userSettings, JSON.stringify({ defaultTools: ["+codemode"] }));
+	const h = harness({}, { activeTools: ["read", "codemode"] });
+	await h.commands.get("fast-tools")!.handler("codemode-off", h.ctx);
+	assert.match(h.notes.at(-1)!, /defaultTools.*\+codemode.*turns codemode back on/);
+	assert.deepEqual(readUser().defaultTools, ["+codemode"]);
+});
+
+test("codemode-on fails cleanly when codemode is unavailable and saves nothing", async () => {
+	rmSync(userSettings, { force: true });
+	const h = harness({}, { activeTools: ["read"], allTools: ["read"] });
+	await h.commands.get("fast-tools")!.handler("codemode-on", h.ctx);
+	assert.deepEqual(h.active(), ["read"]);
+	assert.ok(!existsSync(userSettings));
+	assert.match(h.notes.at(-1)!, /not available.*nothing changed/);
+});
+
+test("guard-off applies to the very next bash call without a reload", async () => {
+	rmSync(userSettings, { force: true });
+	const h = harness({});
+	assert.ok((await h.bash("grep -rn x .")).input.command.includes("--exclude-dir"));
+	await h.commands.get("fast-tools")!.handler("guard-off", h.ctx);
+	assert.equal((await h.bash("grep -rn x .")).input.command, "grep -rn x .");
+	assert.equal(readUser().fastTools.guard, false);
+	await h.commands.get("fast-tools")!.handler("guard-on", h.ctx);
+	assert.ok((await h.bash("grep -rn x .")).input.command.includes("--exclude-dir"));
+});
+
+test("rules-off removes the section on the next prompt; rules-on restores it", async () => {
+	const h = harness({});
+	await h.commands.get("fast-tools")!.handler("rules-off", h.ctx);
+	assert.equal(h.prompt(["bash"])[RULES_SECTION], undefined);
+	await h.commands.get("fast-tools")!.handler("rules-on", h.ctx);
+	assert.match(h.prompt(["bash"])[RULES_SECTION]!, /Batch independent calls/);
+	assert.equal(readUser().fastTools.rules, true);
+});
+
+test("a conflicting project setting is reported", async () => {
+	mkdirSync(join(workDir, ".pi"), { recursive: true });
+	writeFileSync(join(workDir, ".pi", "settings.json"), JSON.stringify({ fastTools: { guard: true } }));
+	const h = harness({});
+	await h.commands.get("fast-tools")!.handler("guard-off", h.ctx);
+	assert.match(h.notes.at(-1)!, /\.pi\/settings\.json sets fastTools\.guard: true, which wins/);
+	rmSync(join(workDir, ".pi"), { recursive: true, force: true });
+});
+
+test("a broken settings file is never overwritten; the toggle still applies in-session", async () => {
+	writeFileSync(userSettings, "{ not json");
+	const h = harness({});
+	await h.commands.get("fast-tools")!.handler("guard-off", h.ctx);
+	assert.equal(readFileSync(userSettings, "utf8"), "{ not json");
+	assert.match(h.notes.at(-1)!, /not saved: .*not valid JSON/);
+	assert.equal((await h.bash("grep -rn x .")).input.command, "grep -rn x .");
+	rmSync(userSettings, { force: true });
+});
+
+test("unknown arguments are rejected without side effects", async () => {
+	rmSync(userSettings, { force: true });
+	const h = harness({});
+	for (const arg of ["codemode", "codemode-maybe", "turbo-on", "on"]) {
+		await h.commands.get("fast-tools")!.handler(arg, h.ctx);
+		assert.match(h.notes.at(-1)!, /unknown argument/, arg);
+	}
+	assert.ok(!existsSync(userSettings));
+});
+
+test("argument completion lists status and every toggle, filtered by prefix", async () => {
+	const h = harness({});
+	const complete = (h.commands.get("fast-tools") as unknown as { getArgumentCompletions: (p: string) => { value: string }[] | null }).getArgumentCompletions;
+	assert.deepEqual(
+		complete("")!.map((i) => i.value),
+		["status", "guard-on", "guard-off", "rules-on", "rules-off", "codemode-on", "codemode-off"],
+	);
+	assert.deepEqual(complete("code")!.map((i) => i.value), ["codemode-on", "codemode-off"]);
+	assert.equal(complete("zzz"), null);
 });
