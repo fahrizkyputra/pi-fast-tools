@@ -1,6 +1,6 @@
 {
   "name": "@fahrizkyputra/pi-fast-tools",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Fewer and faster tool calls for Pi: recursive grep skips node_modules/build output, tests and builds get a timeout, tsc gets a bigger heap, and the model is told to batch calls and use rg/fd. Optional codemode auto-enable.",
   "keywords": [
     "pi-package",

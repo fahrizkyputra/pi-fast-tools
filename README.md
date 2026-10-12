@@ -31,6 +31,8 @@ A `<tool_speed>` section tells the model to:
 
 Lines that name a tool only appear when that tool is active.
 
+The section opens by deferring to project instructions: when a repo's `AGENTS.md` / `CLAUDE.md` forbids running tests without permission, or requires build/lint/typecheck through a specific subagent or command, the model follows the project instead of these generic rules.
+
 ### 3. Optionally enables `codemode`
 
 Pi's built-in [`codemode`](https://pi.dev) tool lets the model run many tool calls from one script in parallel and return only a filtered result. Turn it on with `fastTools.codemode: true`, or natively with `"defaultTools": ["+codemode"]`.

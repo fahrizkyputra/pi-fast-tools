@@ -55,6 +55,16 @@ test("rules mention only active tools", () => {
 	assert.match(full, /timeout` \(e\.g\. 600\)/);
 });
 
+test("rules always defer to project instructions, before any tool rule", () => {
+	for (const tools of [[], ["bash"], ["read", "bash", "codemode"]]) {
+		const rules = buildRules(tools, 600);
+		const precedence = rules.indexOf("Project instructions (AGENTS.md, CLAUDE.md");
+		assert.ok(precedence >= 0, `missing precedence line for ${tools.join(",")}`);
+		assert.ok(precedence < rules.indexOf("- Batch independent calls"));
+		assert.match(rules, /forbids running or creating tests without permission/);
+	}
+});
+
 test("rules fall back to a 300 s timeout hint when the auto timeout is off", () => {
 	assert.match(buildRules(["bash"], 0), /e\.g\. 300/);
 });

@@ -10,6 +10,7 @@ export function buildRules(activeTools: readonly string[], timeoutSeconds: numbe
 	const has = (name: string) => activeTools.includes(name);
 	const lines: string[] = [
 		"Each model turn costs several seconds (often ~7 s); fewer turns beat faster commands.",
+		"These are generic defaults. Project instructions (AGENTS.md, CLAUDE.md, and files they reference) take precedence: if the project forbids running or creating tests without permission, requires build/lint/format/typecheck to go through a specific subagent or command, or restricts how searches are done, follow the project and skip the conflicting rule below.",
 		"",
 		"- Batch independent calls: several reads/searches/listings with no dependency go in ONE assistant message as parallel tool calls. Never one search per turn when the next query is already known.",
 	];
