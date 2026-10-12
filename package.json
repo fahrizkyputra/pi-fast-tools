@@ -1,0 +1,56 @@
+{
+  "name": "@fahrizkyputra/pi-fast-tools",
+  "version": "0.1.0",
+  "description": "Fewer and faster tool calls for Pi: recursive grep skips node_modules/build output, tests and builds get a timeout, tsc gets a bigger heap, and the model is told to batch calls and use rg/fd. Optional codemode auto-enable.",
+  "keywords": [
+    "pi-package",
+    "pi",
+    "pi-extension",
+    "performance",
+    "grep",
+    "timeout",
+    "codemode",
+    "tool-calls"
+  ],
+  "license": "MIT",
+  "author": "Fahrizky Putra",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/fahrizkyputra/pi-fast-tools.git"
+  },
+  "homepage": "https://github.com/fahrizkyputra/pi-fast-tools#readme",
+  "bugs": {
+    "url": "https://github.com/fahrizkyputra/pi-fast-tools/issues"
+  },
+  "type": "module",
+  "pi": {
+    "extensions": [
+      "./extensions/fast-tools.ts"
+    ]
+  },
+  "files": [
+    "extensions",
+    "src",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "test": "node --test test/*.test.ts",
+    "typecheck": "tsc --noEmit",
+    "test:e2e": "node scripts/e2e-rpc.mjs"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "*"
+  },
+  "devDependencies": {
+    "@earendil-works/pi-coding-agent": "*",
+    "@types/node": "^22.0.0",
+    "typescript": "^5.6.0"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
