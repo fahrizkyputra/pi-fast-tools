@@ -1,6 +1,6 @@
 {
   "name": "@fahrizkyputra/pi-fast-tools",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Fewer and faster tool calls for Pi: recursive grep skips node_modules/build output, tests and builds get a timeout, tsc gets a bigger heap, and the model is told to batch calls and use rg/fd. Optional codemode auto-enable.",
   "keywords": [
     "pi-package",
@@ -10,7 +10,8 @@
     "grep",
     "timeout",
     "codemode",
-    "tool-calls"
+    "tool-calls",
+    "jcode"
   ],
   "license": "MIT",
   "author": "Fahrizky Putra",
@@ -28,9 +29,14 @@
       "./extensions/fast-tools.ts"
     ]
   },
+  "bin": {
+    "pi-fast-tools": "bin/jcode.mjs"
+  },
   "files": [
     "extensions",
+    "bin",
     "src",
+    "jcode",
     "README.md",
     "LICENSE"
   ],

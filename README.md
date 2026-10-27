@@ -92,6 +92,26 @@ All keys are optional. Put them in `~/.pi/agent/settings.json`, or in a project'
 
 Settings are read on every call, so edits apply without a restart.
 
+## jcode
+
+The same package also works in [jcode](https://github.com/1jehuang/jcode). jcode has no in-process extensions, so the jcode side is a tool-input hook plus a prompt overlay:
+
+```bash
+npx -y @fahrizkyputra/pi-fast-tools jcode install     # needs Node 22.18+
+```
+
+| Pi | jcode |
+|---|---|
+| bash guard: grep excludes, tsc heap | same, as a `[hooks] pre_tool_transform` command in `~/.jcode/config.toml` (live within seconds) |
+| bash timeout 600 s on tests/builds | not added: jcode already bounds every bash call (120 s default) and moves an overrun to the background |
+| `<tool_speed>` prompt section | a "Tool speed" block in `~/.jcode/prompt-overlay.md`, phrased for jcode's tools (`batch`, `agentgrep`, `read start_line`, timeout in ms); new sessions |
+| `/fast-tools …` | `jcode-fast-tools status \| guard-on\|off \| rules-on\|off` (settings in `~/.jcode/pi-fast-tools.json`) |
+| codemode toggle | not offered: in jcode it is `[tools] codemode = true` |
+
+The installer copies the code to `~/.jcode/plugins/pi-fast-tools/` (Node will not run TypeScript from `node_modules`), and links `jcode-fast-tools` into `~/.local/bin` when that is on `PATH` and free. It edits only its own command in `[hooks]` and its own marked block in the overlay; the first edit keeps `config.toml.pi-fast-tools.bak`. A broken hook fails open: jcode runs the call unchanged.
+
+Update: run the install line again. Remove: `jcode-fast-tools uninstall`.
+
 ## More speed, outside this package
 
 - **Thinking level.** Each turn at `xhigh` is much slower than at `high`. Use `high` as `defaultThinkingLevel` and raise it only for hard problems.

@@ -12,5 +12,5 @@
     "skipLibCheck": true,
     "types": ["node"]
   },
-  "include": ["extensions", "src", "test"]
+  "include": ["extensions", "src", "jcode", "test"]
 }
